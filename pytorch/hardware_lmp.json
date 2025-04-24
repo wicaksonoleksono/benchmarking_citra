@@ -1,0 +1,6 @@
+{
+  "cpu_cores": 2,
+  "cpu_frequency_ghz": 1.1,
+  "ram_gb": 4,
+  "max_power_w": 50
+}
