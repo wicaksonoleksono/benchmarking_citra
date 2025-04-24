@@ -1,8 +1,6 @@
 import timm
 import logging
-from typing import Union, List, Dict
 import torch.nn as nn
-
 logger = logging.getLogger(__name__)
 
 
