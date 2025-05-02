@@ -1,1 +1,1 @@
-from .MobileV3 import init_mobilenetv3_models
+from .model import init_model

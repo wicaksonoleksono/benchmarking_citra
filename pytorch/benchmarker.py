@@ -14,7 +14,7 @@ from typing import Any, Dict
 # -----------------------------------------------------------------------------
 
 PROC = psutil.Process()
-PROC.cpu_percent(interval=None)  # prime meter
+PROC.cpu_percent(interval=None)
 
 
 def load_hardware_profile(profile_path: str) -> Dict[str, Any]:

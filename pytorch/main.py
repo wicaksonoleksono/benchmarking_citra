@@ -11,7 +11,7 @@ import torch.nn as nn
 from get_dataloader import get_dataloaders
 from train_eval import train, evaluate
 from util import Tracker, Metrics, TrainingVisualizer
-from model import init_mobilenetv3_models
+from model import init_model
 
 
 def run_experiment(config_file: str, model_name: str):
@@ -29,7 +29,7 @@ def run_experiment(config_file: str, model_name: str):
 
     # --- build model for this task ---
     num_heads = cfg.model["num_heads"]
-    model = init_mobilenetv3_models(num_heads, model_name)
+    model = init_model(num_heads, model_name)
     model.to(device)
 
     # --- optimizer, scheduler, loss, metrics ---
