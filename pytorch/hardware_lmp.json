@@ -1,6 +1,9 @@
 {
-  "cpu_cores": 2,
-  "cpu_frequency_ghz": 1.1,
-  "ram_gb": 4,
-  "max_power_w": 50
+  "cpu_cores": 8,
+  "cpu_threads": 12,
+  "cpu_performance_core_freq_ghz": 2.0,
+  "cpu_efficient_core_freq_ghz": 1.5,
+  "ram_gb": 8,
+  "max_power_w": 45,
+  "turbo_power_w": 95
 }

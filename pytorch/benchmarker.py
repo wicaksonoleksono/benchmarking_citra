@@ -28,16 +28,29 @@ def load_hardware_profile(profile_path: str) -> Dict[str, Any]:
 
 
 def apply_hardware_constraints(profile: Dict[str, Any]):
-    max_threads = profile.get("cpu_threads") or profile.get("cpu_cores")
-    if isinstance(max_threads, int) and max_threads > 0:
-        torch.set_num_threads(max_threads)
-        os.environ["OMP_NUM_THREADS"] = str(max_threads)
-        print(f"🔧  Thread cap applied: {max_threads}")
-
+    threads = profile.get("cpu_threads")
+    if isinstance(threads, int) and threads > 0:
+        torch.set_num_threads(threads)
+        os.environ["OMP_NUM_THREADS"] = str(threads)
+        print(f"🔧  Thread cap applied: {threads}")
+    cores = profile.get("cpu_cores")
+    if isinstance(cores, int) and cores > 0:
+        try:
+            PROC.cpu_affinity(list(range(cores)))
+            print(f"🔧  CPU affinity limited to first {cores} cores")
+        except AttributeError:
+            try:
+                os.sched_setaffinity(0, set(range(cores)))
+                print(f"🔧  CPU affinity limited to first {cores} cores (sched_setaffinity)")
+            except Exception as ex:
+                print(f"⚠️  Could not set CPU affinity: {ex}")
+        except Exception as ex:
+            print(f"⚠️  Could not set CPU affinity: {ex}")
 
 # -----------------------------------------------------------------------------
 #  Public helpers – API stays unchanged
 # -----------------------------------------------------------------------------
+
 
 def find_best_model_path(output_path):
     paths = glob.glob(os.path.join(output_path, "best_*.pth"))

@@ -10,8 +10,10 @@ import torch.nn as nn
 
 from get_dataloader import get_dataloaders
 from train_eval import train, evaluate
-from util import Tracker, Metrics, TrainingVisualizer
+from util import Tracker, Metrics, TrainingVisualizer, set_seed
+
 from model import init_model
+set_seed(42)
 
 
 def run_experiment(config_file: str, model_name: str):
@@ -66,7 +68,6 @@ def run_experiment(config_file: str, model_name: str):
     visualizer.plot_metrics(str(vis_dir))
 
     if cfg.get("do_test", False):
-        # Run evaluation on test set
         test_metrics = evaluate(
             device=device,
             data_iter=test_loader,
