@@ -17,7 +17,6 @@ from model import init_model
 
 def run_experiment(config_file: str, model_name: str):
     set_seed(42)
-    # --- load cfg from python file ---
     spec = importlib.util.spec_from_file_location("config", config_file)
     cfg_mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(cfg_mod)

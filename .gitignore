@@ -1,3 +1,6 @@
 runs
 *.ipynb
 .ipynb
+runs.*
+Dataset
+data
