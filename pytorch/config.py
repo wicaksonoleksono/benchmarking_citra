@@ -7,11 +7,11 @@ cfg = EasyDict({
     "data_params": {
         "batch_size": 32,
         "num_workers": 1,
-        "data_path": "./data/aggregated/",
+        "data_path": "./data/content/structured_dataset/",
         "test_split": 0.2
     },
     "model": {
-        "num_heads": 10,
+        "num_heads": 11,
         "freeze_backbone": True,
     },
     "optimizer_class": torch.optim.AdamW,
