@@ -7,7 +7,7 @@ cfg = EasyDict({
     "data_params": {
         "batch_size": 64,
         "num_workers": 1,
-        "datapath": "./data/aggregated/",
+        "data_path": "./data/aggregated/",
         "test_split": 0.2
     },
     "model": {

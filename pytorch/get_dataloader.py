@@ -18,7 +18,6 @@ from sklearn.model_selection import train_test_split
 
 
 def get_auto_transforms(model_name, pretrained=True):
-    """Get automatic transforms with augmentations for any torchvision model"""
     weights = None
     if pretrained:
         try:  # Handle MobileNetV2 and other models uniformly
