@@ -13,10 +13,10 @@ from train_eval import train, evaluate
 from util import Tracker, Metrics, TrainingVisualizer, set_seed
 
 from model import init_model
-set_seed(42)
 
 
 def run_experiment(config_file: str, model_name: str):
+    set_seed(42)
     # --- load cfg from python file ---
     spec = importlib.util.spec_from_file_location("config", config_file)
     cfg_mod = importlib.util.module_from_spec(spec)
@@ -30,9 +30,13 @@ def run_experiment(config_file: str, model_name: str):
     train_loader, val_loader, test_loader, _ = get_dataloaders(**cfg.data_params)
 
     # --- build model for this task ---
-    num_heads = cfg.model["num_heads"]
-    model = init_model(num_heads, model_name)
-    model.to(device)
+    num_heads = cfg.model.num_heads
+    freeze_backbone = cfg.model.freeze_backbone
+    model = init_model(
+        num_heads=num_heads,
+        model_name=model_name,
+        freeze_backbone=freeze_backbone
+    )
 
     # --- optimizer, scheduler, loss, metrics ---
     optimizer = cfg.optimizer_class(model.parameters(), **cfg.optimizer_params)
@@ -110,9 +114,6 @@ def main():
             raise ValueError(f"{cfg_file} needs a `model_names` list in cfg")
         for m in cfg.model_names:
             tasks.append((cfg_file, m))
-
-    cfg_files, model_names = zip(*tasks)
-
     max_workers = args.workers or len(tasks)
     with ProcessPoolExecutor(max_workers=max_workers) as exe:
         futures = []

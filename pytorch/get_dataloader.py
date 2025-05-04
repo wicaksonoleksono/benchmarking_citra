@@ -8,6 +8,8 @@ from PIL import Image
 import kagglehub
 from sklearn.model_selection import train_test_split
 from util import set_seed
+from torchvision.transforms import InterpolationMode
+
 # Set random seed for reproducibility
 
 # Custom Dataset class
@@ -43,7 +45,8 @@ def get_dataloaders(data_path=None, batch_size=32, num_workers=4, test_split=0.5
     train_dir = os.path.join(data_path, "images/train")
     val_dir = os.path.join(data_path, "images/validation")
     train_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((224, 224), interpolation=InterpolationMode.BICUBIC,
+                          antialias=True),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(10),
         transforms.ColorJitter(brightness=0.2, contrast=0.2),
@@ -52,7 +55,8 @@ def get_dataloaders(data_path=None, batch_size=32, num_workers=4, test_split=0.5
     ])
 
     val_test_transform = transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((224, 224), interpolation=InterpolationMode.BICUBIC,
+                          antialias=True),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
