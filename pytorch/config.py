@@ -3,7 +3,7 @@ import torch
 
 cfg = EasyDict({
     "device": "cuda",  # or "cpu"
-    "num_epochs": 10,
+    "num_epochs": 50,
     "data_params": {
         "batch_size": 32,
         "num_workers": 1,
