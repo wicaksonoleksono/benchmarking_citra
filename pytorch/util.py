@@ -105,6 +105,59 @@ class Tracker:
         self.history = self._load_history()
         return ckpt.get('epoch', 0)
 
+    def load_model(self, checkpoint_path, model, optimizer=None, lr_scheduler=None):
+        """
+        Load model and optionally optimizer and scheduler states from a checkpoint.
+
+        Args:
+            checkpoint_path: Path to the checkpoint
+            model: Model to load weights into
+            optimizer: Optional optimizer to load state into
+            lr_scheduler: Optional learning rate scheduler to load state into
+
+        Returns:
+            model: The loaded model
+            optimizer: The loaded optimizer (if provided)
+            epoch: The epoch number from the checkpoint
+            lr_scheduler: The loaded scheduler (if provided)
+        """
+        logging.info(f"Loading model from {checkpoint_path}")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+
+        # Check if the checkpoint contains the entire model or just state dict
+        if 'model' in checkpoint and isinstance(checkpoint['model'], torch.nn.Module):
+            # Load the entire model
+            model = checkpoint['model']
+            logging.info(f"Loaded complete model from {checkpoint_path}")
+        elif 'model_state' in checkpoint:
+            # Load just the state dict
+            model.load_state_dict(checkpoint['model_state'])
+            logging.info(f"Loaded model state from {checkpoint_path}")
+        else:
+            raise ValueError(f"Checkpoint doesn't contain valid model data: {checkpoint_path}")
+
+        # Move model to device
+        model = model.to(device)
+
+        # Load optimizer state if provided
+        if optimizer is not None and 'optimizer_state' in checkpoint:
+            optimizer.load_state_dict(checkpoint['optimizer_state'])
+            logging.info("Loaded optimizer state")
+
+        # Load LR scheduler state if provided
+        if lr_scheduler is not None and 'lr_scheduler_state' in checkpoint:
+            lr_scheduler.load_state_dict(checkpoint['lr_scheduler_state'])
+            logging.info("Loaded LR scheduler state")
+
+        epoch = checkpoint.get('epoch', 0)
+
+        # Reload history to ensure consistency
+        self.history = self._load_history()
+
+        return model, optimizer, epoch, lr_scheduler
+
     def update(self, epoch, loss=None, metrics=None, valid=False):
         section = 'valid' if valid else 'train'
         key = f"epoch_{epoch}"
@@ -136,6 +189,52 @@ class Tracker:
         self.save_history()
         logging.info(f"New best model saved: {fname}")
         return True
+
+    def best_f1_score(self, epoch, f1_score, train_f1, model, optimizer):
+        """
+        Check if current F1 score is better than previous best and save model if it is.
+
+        Args:
+            epoch: Current epoch number
+            f1_score: Current validation F1 score
+            train_f1: Current training F1 score
+            model: Model to save
+            optimizer: Optimizer to save
+
+        Returns:
+            bool: True if this is a new best model, False otherwise
+        """
+        if self.history["best"].get("f1_macro", -1) < f1_score:
+            self.history["best"]["f1_macro"] = f1_score
+            self.history["best"]["train_f1"] = train_f1
+            self.history["best"]["epoch"] = epoch
+
+            # Save the model
+            fname = f"best_f1_epoch_{epoch}.pth"
+            path = self.output_dir / fname
+            torch.save({
+                'epoch': epoch,
+                'model': model,  # Save the entire model
+                'model_state': model.state_dict(),
+                'optimizer_state': optimizer.state_dict() if optimizer else None,
+                'f1_score': f1_score,
+                'train_f1': train_f1
+            }, path)
+
+            self.history["best"]["path"] = str(path)
+            self.save_history()
+            return True
+        return False
+
+    def get_latest_checkpoint(self):
+        """
+        Get the path to the latest checkpoint.
+
+        Returns:
+            str or None: Path to the latest checkpoint or None if no checkpoints exist
+        """
+        latest = self.latest_checkpoint()
+        return latest
 
     def latest_checkpoint(self):
         epochs = []
