@@ -139,7 +139,6 @@ def train(
         preds = logits.argmax(dim=1)
         metrics.update(preds.detach(), labels.detach())
 
-        # Print progress every 200 batches
         if (batch_idx + 1) % 200 == 0:
             print(f"[Train] Model ({name}) reached batch {batch_idx + 1} with loss: {loss.item():.4f}")
 

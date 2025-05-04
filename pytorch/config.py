@@ -2,16 +2,15 @@ from easydict import EasyDict
 import torch
 
 cfg = EasyDict({
-    # Device and training
     "device": "cuda",  # or "cpu"
-    "num_epochs": 20,
+    "num_epochs": 10,
     "data_params": {
-        "batch_size": 32,
-        "num_workers": 2,
+        "batch_size": 64,
+        "num_workers": 1,
     },
     "model": {
         "num_heads": 7,
-        "freeze_backbone": True,
+        "freeze_backbone": False,
     },
     "optimizer_class": torch.optim.AdamW,
     "optimizer_name": "ADAM",
@@ -31,6 +30,5 @@ cfg = EasyDict({
         "mobilenetv3_small_100.lamb_in1k",
         "mobilenetv3_large_100.ra_in1k",
         "mobilenetv2_100.ra_in1k"
-
     ]
 })

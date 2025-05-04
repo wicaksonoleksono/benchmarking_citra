@@ -27,7 +27,10 @@ def run_experiment(config_file: str, model_name: str):
 
     # --- prepare data ---
     device = cfg.device if torch.cuda.is_available() else "cpu"
-    train_loader, val_loader, test_loader, _ = get_dataloaders(**cfg.data_params)
+    full_name = cfg.model_names[0]
+    base_name = full_name.split('_', 1)[0]
+    train_loader, val_loader, test_loader, _ = get_dataloaders(**cfg.data_params, model_name=base_name,
+                                                               auto_transform=True)
 
     # --- build model for this task ---
     num_heads = cfg.model.num_heads
