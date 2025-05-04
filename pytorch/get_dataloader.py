@@ -90,6 +90,9 @@ class FaceExpressionDataset(Dataset):
         self.labels = labels
         self.transform = transform
 
+    def __len__(self):  # <--- THIS WAS MISSING
+        return len(self.image_paths)
+
     def __getitem__(self, idx):
         try:
             img = Image.open(self.image_paths[idx]).convert('RGB')
@@ -113,23 +116,29 @@ def get_dataloaders(data_path,
     # 2) split into train / test, then train / val
     train_paths, test_paths, train_labels, test_labels = train_test_split(
         all_paths, all_labels,
-        test_size=test_split/(1-test_split),
+        test_size=test_split,
         random_state=seed,
         stratify=all_labels
     )
     train_paths, val_paths, train_labels, val_labels = train_test_split(
         train_paths, train_labels,
-        test_size=test_split/(1-test_split),
+        test_size=test_split,
         random_state=seed,
         stratify=train_labels
     )
     if auto_transform:
         train_tf, val_tf = get_auto_transforms(model_name)
     else:
-        train_tf = val_tf = transforms.Compose([
-            transforms.Resize((224, 224), interpolation=InterpolationMode.BICUBIC),
+        train_tf = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2),  # Keep augmentation here
             transforms.ToTensor(),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+        ])
+        val_tf = transforms.Compose([
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
             transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ])
 

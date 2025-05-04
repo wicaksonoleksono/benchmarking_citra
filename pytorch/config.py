@@ -5,7 +5,7 @@ cfg = EasyDict({
     "device": "cuda",  # or "cpu"
     "num_epochs": 10,
     "data_params": {
-        "batch_size": 64,
+        "batch_size": 32,
         "num_workers": 1,
         "data_path": "./data/aggregated/",
         "test_split": 0.2
@@ -17,13 +17,13 @@ cfg = EasyDict({
     "optimizer_class": torch.optim.AdamW,
     "optimizer_name": "ADAM",
     "optimizer_params": {
-        "lr": 1e-3,
-        "weight_decay": 1e-4,
+        "lr": 5e-4,
+        "weight_decay": 1e-6,
     },
-    "scheduler_class": torch.optim.lr_scheduler.StepLR,
+    "scheduler_class": torch.optim.lr_scheduler.CosineAnnealingLR,
     "scheduler_params": {
-        "step_size": 5,
-        "gamma": 0.1,
+        "T_max": 25,
+
     },
     "base_output_dir": "./runs",
     "do_test": True,
