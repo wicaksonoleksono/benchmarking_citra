@@ -20,6 +20,7 @@ def evaluate(
     test_name=None,
     output_path=None,
     optimizer=None,
+    train_metrics=None,
 ):
     model.to(device).eval()
     metrics = Metrics()
@@ -103,7 +104,7 @@ def evaluate(
         },
         valid=True
     )
-    tracker.save_best(model, optimizer, epoch, final_metrics["recall"])
+    tracker.save_best(model, optimizer, epoch, final_metrics["recall"], train_metrics["recall"])
     tracker.save_history()
     return avg_loss, final_metrics
 
@@ -165,7 +166,8 @@ def train(
         ce_fn=ce_fn,
         tracker=tracker,
         is_testing=False,
-        optimizer=optimizer
+        optimizer=optimizer,
+        train_metrics=train_metrics
     )
 
     print(

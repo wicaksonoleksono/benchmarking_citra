@@ -168,24 +168,34 @@ class Tracker:
             entry.update(metrics)
         self.save_history()
 
-    def save_best(self, model, optimizer, epoch, recall):
-        best = self.history['best']
-        if recall <= best.get('recall', -float('inf')):
-            return False
-        if best['path']:
-            try:
-                Path(best['path']).unlink()
-            except Exception:
-                pass
+    def save_best(self, model, optimizer, epoch, recall, recall_train):
+        best = self.history.get('best')
+        if best is not None:
+            best_recall = best['recall']
+            gap = recall_train - recall
+            if not (recall > best_recall and gap <= 9):
+                return False
+        if best:
+            old_path = best.get('path')
+            if old_path:
+                try:
+                    Path(old_path).unlink()
+                except Exception:
+                    pass
+
         fname = f"best_epoch_{epoch}.pth"
         path = self.output_dir / fname
         torch.save({
             'epoch': epoch,
-            'model': model,  # Save the entire model
             'model_state': model.state_dict(),
             'optimizer_state': optimizer.state_dict() if optimizer else None
         }, path)
-        self.history['best'] = {'recall': recall, 'epoch': epoch, 'path': str(path)}
+
+        self.history['best'] = {
+            'recall': recall,
+            'epoch': epoch,
+            'path': str(path)
+        }
         self.save_history()
         logging.info(f"New best model saved: {fname}")
         return True

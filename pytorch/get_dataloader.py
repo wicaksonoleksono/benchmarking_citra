@@ -36,14 +36,10 @@ class FaceExpressionDataset(Dataset):
         self.image_paths = image_paths
         self.labels = labels
         self.transform = transform
-
-        # Verify label range here
         if self.labels:
             min_label = min(self.labels)
             max_label = max(self.labels)
             print(f"Dataset label range: min={min_label}, max={max_label}")
-
-            # Check for any negative labels
             if min_label < 0:
                 print("WARNING: Negative labels detected!")
 
@@ -62,72 +58,21 @@ class FaceExpressionDataset(Dataset):
 
         except Exception as e:
             print(f"Error loading {self.image_paths[idx]}: {e}")
-            # Instead of recursion, return a valid alternative
             if len(self) > 1:
                 alt_idx = (idx + 1) % len(self)
-                # Avoid infinite recursion
                 if alt_idx != idx:
                     return self.__getitem__(alt_idx)
-
-            # If we can't find a valid alternative, create a dummy one
             dummy = torch.zeros(3, 224, 224)
-            return dummy, 0  # Use first class as fallback
+            return dummy, 0
 
 
-def get_auto_transforms(model_name, pretrained=True):
-    # Try to use timm for transforms
-    try:
-        # Get model config
-        if pretrained:
-            model = timm.create_model(model_name, pretrained=True)
-            mean = model.default_cfg.get('mean', [0.485, 0.456, 0.406])
-            std = model.default_cfg.get('std', [0.229, 0.224, 0.225])
-            size = model.default_cfg.get('input_size', [3, 224, 224])[1]
-        else:
-            # Default values
-            mean = [0.485, 0.456, 0.406]
-            std = [0.229, 0.224, 0.225]
-            size = 224
-
-        # Create transforms
-        train_tf = transforms.Compose([
-            transforms.RandomResizedCrop(size),
-            transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
-
-        val_tf = transforms.Compose([
-            transforms.Resize(int(size * 1.14)),
-            transforms.CenterCrop(size),
-            transforms.ToTensor(),
-            transforms.Normalize(mean, std)
-        ])
-
-        return train_tf, val_tf
-
-    except Exception as e:
-        print(f"Error creating transforms: {e}")
-        # Fall back to default transforms
-
-    # Default transforms
-    size = 224
-    train_tf = transforms.Compose([
-        transforms.RandomResizedCrop(size),
-        transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(0.4, 0.4, 0.4),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-
-    val_tf = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(size),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-
+def get_auto_transforms(model_name: str, pretrained: bool = True):
+    model = timm.create_model(model_name, pretrained=pretrained)
+    data_cfg = timm.data.resolve_model_data_config(model)
+    train_tf = timm.data.create_transform(**data_cfg, is_training=True)
+    val_tf = timm.data.create_transform(**data_cfg, is_training=False)
+    del model
+    torch.cuda.empty_cache()
     return train_tf, val_tf
 
 
@@ -138,11 +83,6 @@ def get_dataloaders(data_path,
                     seed=42,
                     model_name='mobilenetv2_100',
                     auto_transform=True):
-    """
-    Create data loaders for training, validation and testing.
-    The function ensures consistent class indices across all splits.
-    """
-    # Scan folder and get paths, labels and class mapping
     all_paths, all_labels, class_to_idx = scan_folder(data_path)
     num_classes = len(class_to_idx)
 

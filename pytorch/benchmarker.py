@@ -16,7 +16,6 @@ from typing import Any, Dict
 PROC = psutil.Process()
 PROC.cpu_percent(interval=None)
 
-
 def load_hardware_profile(profile_path: str) -> Dict[str, Any]:
     if os.path.exists(profile_path):
         try:
@@ -46,10 +45,6 @@ def apply_hardware_constraints(profile: Dict[str, Any]):
                 print(f"⚠️  Could not set CPU affinity: {ex}")
         except Exception as ex:
             print(f"⚠️  Could not set CPU affinity: {ex}")
-
-# -----------------------------------------------------------------------------
-#  Public helpers – API stays unchanged
-# -----------------------------------------------------------------------------
 
 
 def find_best_model_path(output_path):

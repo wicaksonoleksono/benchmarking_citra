@@ -27,8 +27,7 @@ def run_experiment(config_file: str, model_name: str):
         raise ValueError(f"Config file {config_file} must define 'cfg' EasyDict")
     device = cfg.device if torch.cuda.is_available() else "cpu"
     full_name = cfg.model_names[0] if isinstance(cfg.model_names, list) else model_name
-    base_name = full_name.split('_', 1)[0]
-    train_loader, val_loader, test_loader, _ = get_dataloaders(**cfg.data_params, model_name=base_name,
+    train_loader, val_loader, test_loader, _ = get_dataloaders(**cfg.data_params, model_name=full_name,
                                                                auto_transform=True)
     num_heads = cfg.model.num_heads
     freeze_backbone = cfg.model.freeze_backbone
