@@ -5,3 +5,6 @@ runs.*
 Dataset
 data
 data.zip
+__pycache__
+*.pyc
+data.zip

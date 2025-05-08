@@ -6,10 +6,11 @@ from torchvision import transforms
 from PIL import Image
 from sklearn.model_selection import train_test_split
 import timm
+IMAGENET_MEAN = [0.485, 0.456, 0.406]
+IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
 def scan_folder(root):
-
     paths, labels, class_to_idx = [], [], {}
     valid_exts = ('.png', '.jpg', '.jpeg', '.webp')
     class_dirs = [d for d in sorted(os.listdir(root)) if os.path.isdir(os.path.join(root, d))]
@@ -67,12 +68,26 @@ class FaceExpressionDataset(Dataset):
 
 
 def get_auto_transforms(model_name: str, pretrained: bool = True):
-    model = timm.create_model(model_name, pretrained=pretrained)
-    data_cfg = timm.data.resolve_model_data_config(model)
-    train_tf = timm.data.create_transform(**data_cfg, is_training=True)
-    val_tf = timm.data.create_transform(**data_cfg, is_training=False)
-    del model
-    torch.cuda.empty_cache()
+    if model_name == "proxyless_nas":
+        train_tf = transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ])
+        val_tf = transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+        ])
+    else:
+        model = timm.create_model(model_name, pretrained=pretrained)
+        data_cfg = timm.data.resolve_model_data_config(model)
+        train_tf = timm.data.create_transform(**data_cfg, is_training=True)
+        val_tf = timm.data.create_transform(**data_cfg, is_training=False)
+        del model
+        torch.cuda.empty_cache()
     return train_tf, val_tf
 
 
@@ -81,8 +96,7 @@ def get_dataloaders(data_path,
                     num_workers=4,
                     test_split=0.2,
                     seed=42,
-                    model_name='mobilenetv2_100',
-                    auto_transform=True):
+                    model_name='mobilenetv2_100',):
     all_paths, all_labels, class_to_idx = scan_folder(data_path)
     num_classes = len(class_to_idx)
 
@@ -100,37 +114,16 @@ def get_dataloaders(data_path,
         random_state=seed,
         stratify=all_labels
     )
-
     train_paths, val_paths, train_labels, val_labels = train_test_split(
         train_paths, train_labels,
         test_size=test_split,
         random_state=seed,
         stratify=train_labels
     )
-
-    # Get transforms
-    if auto_transform:
-        train_tf, val_tf = get_auto_transforms(model_name)
-    else:
-        train_tf = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ])
-        val_tf = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-        ])
-
-    # Create datasets
+    train_tf, val_tf = get_auto_transforms(model_name)
     train_ds = FaceExpressionDataset(train_paths, train_labels, train_tf)
     val_ds = FaceExpressionDataset(val_paths, val_labels, val_tf)
     test_ds = FaceExpressionDataset(test_paths, test_labels, val_tf)
-
-    # Create data loaders
     train_loader = DataLoader(
         train_ds,
         batch_size=batch_size,

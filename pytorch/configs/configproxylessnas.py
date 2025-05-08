@@ -5,8 +5,8 @@ cfg = EasyDict({
     "device": "cuda",
     "num_epochs": 30,
     "data_params": {
-        "batch_size": 32,
-        "num_workers": 1,  # Increased from 1 for better data loading
+        "batch_size": 16,
+        "num_workers": 4,  # Increased from 1 for better data loading
         "data_path": "./data/content/structured_dataset/",
         "test_split": 0.2
     },
@@ -17,7 +17,7 @@ cfg = EasyDict({
     "optimizer_class": torch.optim.AdamW,
     "optimizer_name": "ADAM",
     "optimizer_params": {
-        "lr": 5e-3,
+        "lr": 1e-4,
         "weight_decay": 1e-7,
     },
     "scheduler_class": torch.optim.lr_scheduler.CosineAnnealingLR,
@@ -28,6 +28,6 @@ cfg = EasyDict({
     "do_test": True,
     "test_name": "final_eval",
     "model_names": [
-        "efficientnet_lite0.ra_in1k",
+        "proxyless_nas",
     ]
 })
