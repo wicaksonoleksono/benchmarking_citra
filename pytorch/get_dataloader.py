@@ -115,6 +115,7 @@ def get_auto_transforms(model_name: str, pretrained: bool = True):
         del model
         torch.cuda.empty_cache()
     return train_tf, val_tf
+# testing
 
 
 def get_dataloaders(data_path,
