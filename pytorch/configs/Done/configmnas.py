@@ -1,14 +1,15 @@
 from easydict import EasyDict
 import torch
-
+n = 50
 cfg = EasyDict({
     "device": "cuda",
-    "num_epochs": 30,
+    "num_epochs": n,
     "data_params": {
         "batch_size": 32,
-        "num_workers": 4,  # Increased from 1 for better data loading
-        "data_path": "./data/content/structured_dataset/",
-        "test_split": 0.2
+        "num_workers": 1,
+        "data_path": "./nodup_data/",
+        "test_split": 0.1,
+        "val_split": 0.1,
     },
     "model": {
         "num_heads": 10,
@@ -22,7 +23,8 @@ cfg = EasyDict({
     },
     "scheduler_class": torch.optim.lr_scheduler.CosineAnnealingLR,
     "scheduler_params": {
-        "T_max": 100,
+        "T_max": n,
+        "eta_min": 1e-6,
     },
     "base_output_dir": "./runs",
     "do_test": True,

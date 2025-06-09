@@ -1,3 +1,5 @@
+import np
+import cv2
 import os
 import math
 import torch
@@ -67,14 +69,36 @@ class FaceExpressionDataset(Dataset):
             return dummy, 0
 
 
+class CLAHETransform:
+    def __init__(self, clip_limit=2.0, tile_grid_size=(8, 8)):
+        self.clip_limit = clip_limit
+        self.tile_grid_size = tile_grid_size
+
+    def __call__(self, img):
+        img_np = np.array(img)
+        if len(img_np.shape) == 3 and img_np.shape[2] == 3:
+            img_gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+        else:
+            img_gray = img_np
+        clahe = cv2.createCLAHE(clipLimit=self.clip_limit, tileGridSize=self.tile_grid_size)
+        img_clahe = clahe.apply(img_gray)
+        if len(img_np.shape) == 3 and img_np.shape[2] == 3:
+            img_clahe = np.stack([img_clahe] * 3, axis=-1)
+        return transforms.functional.to_pil_image(img_clahe)
+
+
 def get_auto_transforms(model_name: str, pretrained: bool = True):
     if model_name == "proxyless_nas":
-        train_tf = transforms.Compose([
+        train_transforms_list = [
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
+        ]
+        train_transforms_list.append(CLAHETransform())
+        train_transforms_list.extend([
             transforms.ToTensor(),
             transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
         ])
+        train_tf = transforms.Compose(train_transforms_list)
         val_tf = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
@@ -85,6 +109,8 @@ def get_auto_transforms(model_name: str, pretrained: bool = True):
         model = timm.create_model(model_name, pretrained=pretrained)
         data_cfg = timm.data.resolve_model_data_config(model)
         train_tf = timm.data.create_transform(**data_cfg, is_training=True)
+        clahe_transform = CLAHETransform()
+        train_tf.transforms.insert(-2, clahe_transform)
         val_tf = timm.data.create_transform(**data_cfg, is_training=False)
         del model
         torch.cuda.empty_cache()
@@ -99,15 +125,10 @@ def get_dataloaders(data_path,
                     model_name='mobilenetv2_100',):
     all_paths, all_labels, class_to_idx = scan_folder(data_path)
     num_classes = len(class_to_idx)
-
     if not all_paths:
         raise ValueError(f"No images found in {data_path}")
-
-    # Check if there's a class mismatch
     if max(all_labels) >= num_classes:
         raise ValueError(f"Label index {max(all_labels)} exceeds class count {num_classes}")
-
-    # Split data
     train_paths, test_paths, train_labels, test_labels = train_test_split(
         all_paths, all_labels,
         test_size=test_split,
