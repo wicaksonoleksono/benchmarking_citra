@@ -16,6 +16,7 @@ from typing import Any, Dict
 PROC = psutil.Process()
 PROC.cpu_percent(interval=None)
 
+
 def load_hardware_profile(profile_path: str) -> Dict[str, Any]:
     if os.path.exists(profile_path):
         try:
@@ -107,7 +108,6 @@ def benchmark_inference(session, input_data, duration_s: int = 10):
 
 
 def benchmark_onnx(model, data_iter, device, output_path, test_name):
-
     model = model.cpu().eval()
     hw_profile = load_hardware_profile("hardware_lmp.json")
     apply_hardware_constraints(hw_profile)

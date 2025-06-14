@@ -6,15 +6,12 @@ import re
 import logging
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
-
 import torch
 import torch.nn as nn
-
 from get_dataloader import get_dataloaders
 from train_eval import train, evaluate
 from util import Tracker, Metrics, TrainingVisualizer, set_seed
-
-from model import init_model
+from model import init_model, FM
 
 
 def run_experiment(config_file: str, model_name: str):
@@ -30,11 +27,18 @@ def run_experiment(config_file: str, model_name: str):
     train_loader, val_loader, test_loader, _ = get_dataloaders(**cfg.data_params, model_name=full_name)
     num_heads = cfg.model.num_heads
     freeze_backbone = cfg.model.freeze_backbone
-    model = init_model(
-        num_heads=num_heads,
-        model_name=model_name,
-        freeze_backbone=freeze_backbone
-    )
+    if cfg.arcface == True:
+        model = FM(
+            num_classes=num_heads,
+            model_name=model_name,
+            freeze_backbone=freeze_backbone,
+        )
+    else:
+        model = init_model(
+            num_heads=num_heads,
+            model_name=model_name,
+            freeze_backbone=freeze_backbone
+        )
     optimizer = cfg.optimizer_class(model.parameters(), **cfg.optimizer_params)
     lr_scheduler = cfg.scheduler_class(optimizer, **cfg.scheduler_params)
     ce_fn = nn.CrossEntropyLoss()
@@ -80,11 +84,9 @@ def run_experiment(config_file: str, model_name: str):
                 test_name=cfg.get("test_name", "test"),
                 output_path=str(out_dir),
             )
-
             # Mark as tested
             tracker.history["tested"] = True
             tracker.save_history()
-
             # Visualize test results
             vis_dir = out_dir / "visualizations"
             visualizer = TrainingVisualizer(tracker.history)
@@ -108,32 +110,30 @@ def run_experiment(config_file: str, model_name: str):
             tracker=tracker,
             metrics=metrics,
             ce_fn=ce_fn,
+
         )
         logging.info(f"💾 Saved checkpoint for epoch {epoch}")
     vis_dir = out_dir / "visualizations"
     vis_dir.mkdir(parents=True, exist_ok=True)
     visualizer = TrainingVisualizer(tracker.history)
     visualizer.plot_metrics(str(vis_dir))
-    if cfg.get("do_test", False) and not tracker.history.get("tested", False):
+    if cfg.get("do_test", False) or not tracker.history.get("tested", False):
         if tracker.history["best"]["path"]:
             best_path = tracker.history["best"]["path"]
             model, _, _, _ = tracker.load_model(best_path, model)
-
-        test_metrics = evaluate(
-            device=device,
-            data_iter=test_loader,
-            model=model,
-            ce_fn=ce_fn,
-            tracker=tracker,
-            epoch=None,
-            is_testing=True,
-            test_name=cfg.get("test_name", "test"),
-            output_path=str(out_dir),
-        )
-
-        tracker.history["tested"] = True
-        tracker.save_history()
-        visualizer.plot_confusion_matrix(test_metrics, str(vis_dir))
+            test_metrics = evaluate(
+                device=device,
+                data_iter=test_loader,
+                model=model,
+                ce_fn=ce_fn,
+                tracker=tracker,
+                epoch=None,
+                is_testing=True,
+                test_name=cfg.get("test_name", "test"),
+                output_path=str(out_dir),
+            )
+            tracker.save_history()
+            visualizer.plot_confusion_matrix(test_metrics, str(vis_dir))
 
 
 def main():

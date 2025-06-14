@@ -2,14 +2,14 @@ from easydict import EasyDict
 import torch
 n = 50
 cfg = EasyDict({
+    "arcface": True,
     "device": "cuda",
     "num_epochs": n,
     "data_params": {
-        "batch_size": 32,
-        "num_workers": 1,
-        "data_path": "./nodup_data/",
+        "batch_size": 128,
+        "num_workers": 4,
+        "data_path": "./preprocessed/nodup_data/",
         "test_split": 0.1,
-        "val_split": 0.1,
     },
     "model": {
         "num_heads": 10,
@@ -18,8 +18,8 @@ cfg = EasyDict({
     "optimizer_class": torch.optim.AdamW,
     "optimizer_name": "ADAM",
     "optimizer_params": {
-        "lr": 1e-4,
-        "weight_decay": 1e-7,
+        "lr": 5e-5,
+        "weight_decay": 1e-6,
     },
     "scheduler_class": torch.optim.lr_scheduler.CosineAnnealingLR,
     "scheduler_params": {

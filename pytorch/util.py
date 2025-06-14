@@ -46,7 +46,7 @@ class Metrics:
             "precision": precision_score(self.true_labels, self.pred_labels, average='macro', zero_division=0),
             "recall":    recall_score(self.true_labels, self.pred_labels, average='macro', zero_division=0),
             "f1_macro":  f1_score(self.true_labels, self.pred_labels, average='macro', zero_division=0),
-            "f1_weighted": f1_score(self.true_labels, self.pred_labels, average='weighted', zero_division=0)
+            "f1_weighted": f1_score(self.true_labels, self.pred_labels, average='weighted', zero_division=0),
         }
 
 
@@ -106,33 +106,13 @@ class Tracker:
         return ckpt.get('epoch', 0)
 
     def load_model(self, checkpoint_path, model, optimizer=None, lr_scheduler=None):
-        """
-        Load model and optionally optimizer and scheduler states from a checkpoint.
-
-        Args:
-            checkpoint_path: Path to the checkpoint
-            model: Model to load weights into
-            optimizer: Optional optimizer to load state into
-            lr_scheduler: Optional learning rate scheduler to load state into
-
-        Returns:
-            model: The loaded model
-            optimizer: The loaded optimizer (if provided)
-            epoch: The epoch number from the checkpoint
-            lr_scheduler: The loaded scheduler (if provided)
-        """
         logging.info(f"Loading model from {checkpoint_path}")
         device = "cuda" if torch.cuda.is_available() else "cpu"
-
         checkpoint = torch.load(checkpoint_path, map_location=device)
-
-        # Check if the checkpoint contains the entire model or just state dict
         if 'model' in checkpoint and isinstance(checkpoint['model'], torch.nn.Module):
-            # Load the entire model
             model = checkpoint['model']
             logging.info(f"Loaded complete model from {checkpoint_path}")
         elif 'model_state' in checkpoint:
-            # Load just the state dict
             model.load_state_dict(checkpoint['model_state'])
             logging.info(f"Loaded model state from {checkpoint_path}")
         else:
@@ -145,15 +125,12 @@ class Tracker:
         if optimizer is not None and 'optimizer_state' in checkpoint:
             optimizer.load_state_dict(checkpoint['optimizer_state'])
             logging.info("Loaded optimizer state")
-
-        # Load LR scheduler state if provided
         if lr_scheduler is not None and 'lr_scheduler_state' in checkpoint:
             lr_scheduler.load_state_dict(checkpoint['lr_scheduler_state'])
             logging.info("Loaded LR scheduler state")
 
         epoch = checkpoint.get('epoch', 0)
 
-        # Reload history to ensure consistency
         self.history = self._load_history()
 
         return model, optimizer, epoch, lr_scheduler
@@ -168,31 +145,27 @@ class Tracker:
             entry.update(metrics)
         self.save_history()
 
-    def save_best(self, model, optimizer, epoch, recall, recall_train):
-        best = self.history.get('best')
-        if best is not None:
-            best_recall = best['recall']
-            gap = recall_train - recall
-            if not (recall > best_recall and gap <= 9):
-                return False
-        if best:
-            old_path = best.get('path')
-            if old_path:
-                try:
-                    Path(old_path).unlink()
-                except Exception:
-                    pass
-
-        fname = f"best_epoch_{epoch}.pth"
+    def save_best(self, model, optimizer, epoch, train_loss, val_loss):
+        best_info = self.history.get('best')
+        previous_best_loss = best_info.get('loss', float('inf'))
+        if val_loss >= previous_best_loss:
+            return False
+        print(f"✅ New best model found! Validation loss improved from {previous_best_loss:.6f} to {val_loss:.6f}.")
+        old_path = best_info.get('path')
+        if old_path and Path(old_path).exists():
+            try:
+                Path(old_path).unlink()
+            except Exception as e:
+                logging.warning(f"Could not remove old best model {old_path}: {e}")
+        fname = f"best_loss_{val_loss:.4f}_epoch_{epoch}.pth"
         path = self.output_dir / fname
         torch.save({
             'epoch': epoch,
             'model_state': model.state_dict(),
             'optimizer_state': optimizer.state_dict() if optimizer else None
         }, path)
-
         self.history['best'] = {
-            'recall': recall,
+            'loss': val_loss,
             'epoch': epoch,
             'path': str(path)
         }
@@ -200,20 +173,38 @@ class Tracker:
         logging.info(f"New best model saved: {fname}")
         return True
 
+    # def save_best(self, model, optimizer, epoch, recall, recall_train):
+    #     current_gap = abs(recall_train - recall)
+    #     best_info = self.history.get('best')
+    #     previous_best_gap = best_info.get('gap', float('inf'))
+    #     if current_gap >= previous_best_gap:
+    #         return False
+    #     print(f"✅ New best model found! Gap improved from {previous_best_gap:.4f} to {current_gap:.4f}.")
+    #     old_path = best_info.get('path')
+    #     if old_path and Path(old_path).exists():
+    #         try:
+    #             Path(old_path).unlink()
+    #         except Exception as e:
+    #             logging.warning(f"Could not remove old best model {old_path}: {e}")
+    #     fname = f"best_epoch_{epoch}.pth"
+    #     path = self.output_dir / fname
+    #     torch.save({
+    #         'epoch': epoch,
+    #         'model_state': model.state_dict(),
+    #         'optimizer_state': optimizer.state_dict() if optimizer else None
+    #     }, path)
+    #     self.history['best'] = {
+    #         'gap': current_gap,
+    #         'recall_validation': recall,
+    #         'recall_train': recall_train,
+    #         'epoch': epoch,
+    #         'path': str(path)
+    #     }
+    #     self.save_history()
+    #     logging.info(f"New best model saved: {fname}")
+    #     return True
+
     def best_f1_score(self, epoch, f1_score, train_f1, model, optimizer):
-        """
-        Check if current F1 score is better than previous best and save model if it is.
-
-        Args:
-            epoch: Current epoch number
-            f1_score: Current validation F1 score
-            train_f1: Current training F1 score
-            model: Model to save
-            optimizer: Optimizer to save
-
-        Returns:
-            bool: True if this is a new best model, False otherwise
-        """
         if self.history["best"].get("f1_macro", -1) < f1_score:
             self.history["best"]["f1_macro"] = f1_score
             self.history["best"]["train_f1"] = train_f1

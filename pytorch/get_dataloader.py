@@ -1,4 +1,4 @@
-import np
+import numpy as np
 import cv2
 import os
 import math
@@ -108,17 +108,20 @@ def get_auto_transforms(model_name: str, pretrained: bool = True):
     else:
         model = timm.create_model(model_name, pretrained=pretrained)
         data_cfg = timm.data.resolve_model_data_config(model)
-        train_tf = timm.data.create_transform(**data_cfg, is_training=True)
-        clahe_transform = CLAHETransform()
-        train_tf.transforms.insert(-2, clahe_transform)
         val_tf = timm.data.create_transform(**data_cfg, is_training=False)
+        train_tf = timm.data.create_transform(**data_cfg, is_training=True)
+        grayscale_transform = transforms.Grayscale(num_output_channels=3)
+        clahe_transform = CLAHETransform()  # Your custom CLAHE transform
+        train_tf.transforms.insert(0, grayscale_transform)
+        train_tf.transforms.insert(-2, clahe_transform)
+        val_tf.transforms.insert(0, grayscale_transform)
         del model
-        torch.cuda.empty_cache()
+    torch.cuda.empty_cache()
     return train_tf, val_tf
 # testing
 
 
-def get_dataloaders(data_path,
+def get_dataloaders(data_path="./preprocessed/nodup_data_face_only",
                     batch_size=32,
                     num_workers=4,
                     test_split=0.2,
